@@ -1,0 +1,500 @@
+Description: Deploy 10 EC2
+
+Parameters:
+  EC2KEY:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  APPInstanceType:
+    Description: Choose instance type for VPN Gateway 
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.medium
+      - t2.medium
+    ConstraintDescription: must be a valid EC2 instance type.
+  X64AmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Description: This SSM parameter will have latest AMI image, just keep default and DO NOT modify it.
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+  # SSH Allow list
+  SSHAllowList:
+    Description: Please enter the CIDR that allows to connect to server
+    Type: String
+    Default: 0.0.0.0/24
+
+Resources:
+
+  SSMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: 
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+      Path: /
+      RoleName: !Join ['-', ['EC2SessionManager', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['EC2SessionManager', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+  SSMIAMprofile:
+    Type: "AWS::IAM::InstanceProfile"
+    DependsOn: SSMRole
+    Properties:
+      Path: "/"
+      Roles:
+        -
+          Ref: "SSMRole"
+
+  APPSecurtiyGroup1:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Join ['-', ['ALLOWSSH', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      GroupDescription: ALLOWSSH
+      SecurityGroupIngress:
+        - IpProtocol: tcp # Allow SSH from JumpServer SecurityGroupID in VPC1
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref SSHAllowList
+          Description: Allow SSH
+      Tags:
+        - Key: Name
+          Value: ALLOWSSH
+
+  # ---- VM1 ----
+  EIP1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VM1:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: EIP1
+    Properties:
+      KeyName: !Ref EC2KEY
+      ImageId: !Ref X64AmiId
+      InstanceType: !Ref APPInstanceType
+      IamInstanceProfile: !Ref SSMIAMprofile
+      Monitoring: true
+      BlockDeviceMappings: # Use gp3 as root disk @2021-01-31
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 100
+            DeleteOnTermination: true
+      SecurityGroupIds:
+        - !Ref APPSecurtiyGroup1
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['CF', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #! /bin/bash
+            - |
+              yum update -y
+            - |+
+
+  EIP1assignment:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: VM1
+    Properties:
+      InstanceId: !Ref VM1
+      EIP: !Ref EIP1
+
+  # ---- VM2 ----
+  EIP2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VM2:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: EIP2
+    Properties:
+      KeyName: !Ref EC2KEY
+      ImageId: !Ref X64AmiId
+      InstanceType: !Ref APPInstanceType
+      Monitoring: true
+      IamInstanceProfile: !Ref SSMIAMprofile
+      BlockDeviceMappings: # Use gp3 as root disk @2021-01-31
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 100
+            DeleteOnTermination: true
+      SecurityGroupIds:
+        - !Ref APPSecurtiyGroup1
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['CF', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #! /bin/bash
+            - |
+              yum update -y
+            - |+
+
+  EIP2assignment:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: VM2
+    Properties:
+      InstanceId: !Ref VM2
+      EIP: !Ref EIP2
+
+  # ---- VM3 ----
+  EIP3:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VM3:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: EIP3
+    Properties:
+      KeyName: !Ref EC2KEY
+      ImageId: !Ref X64AmiId
+      InstanceType: !Ref APPInstanceType
+      Monitoring: true
+      IamInstanceProfile: !Ref SSMIAMprofile
+      BlockDeviceMappings: # Use gp3 as root disk @2021-01-31
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 100
+            DeleteOnTermination: true
+      SecurityGroupIds:
+        - !Ref APPSecurtiyGroup1
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['CF', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #! /bin/bash
+            - |
+              yum update -y
+            - |+
+
+  EIP3assignment:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: VM3
+    Properties:
+      InstanceId: !Ref VM3
+      EIP: !Ref EIP3
+
+  # ---- VM4 ----
+  EIP4:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VM4:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: EIP4
+    Properties:
+      KeyName: !Ref EC2KEY
+      ImageId: !Ref X64AmiId
+      InstanceType: !Ref APPInstanceType
+      Monitoring: true
+      IamInstanceProfile: !Ref SSMIAMprofile
+      BlockDeviceMappings: # Use gp3 as root disk @2021-01-31
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 100
+            DeleteOnTermination: true
+      SecurityGroupIds:
+        - !Ref APPSecurtiyGroup1
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['CF', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #! /bin/bash
+            - |
+              yum update -y
+            - |+
+
+  EIP4assignment:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: VM4
+    Properties:
+      InstanceId: !Ref VM4
+      EIP: !Ref EIP4
+
+  # ---- VM5 ----
+  EIP5:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VM5:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: EIP5
+    Properties:
+      KeyName: !Ref EC2KEY
+      ImageId: !Ref X64AmiId
+      InstanceType: !Ref APPInstanceType
+      Monitoring: true
+      IamInstanceProfile: !Ref SSMIAMprofile
+      BlockDeviceMappings: # Use gp3 as root disk @2021-01-31
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 100
+            DeleteOnTermination: true
+      SecurityGroupIds:
+        - !Ref APPSecurtiyGroup1
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['CF', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #! /bin/bash
+            - |
+              yum update -y
+            - |+
+
+  EIP5assignment:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: VM5
+    Properties:
+      InstanceId: !Ref VM5
+      EIP: !Ref EIP5
+
+  # ---- VM6 ----
+  EIP6:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VM6:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: EIP6
+    Properties:
+      KeyName: !Ref EC2KEY
+      ImageId: !Ref X64AmiId
+      InstanceType: !Ref APPInstanceType
+      Monitoring: true
+      IamInstanceProfile: !Ref SSMIAMprofile
+      BlockDeviceMappings: # Use gp3 as root disk @2021-01-31
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 100
+            DeleteOnTermination: true
+      SecurityGroupIds:
+        - !Ref APPSecurtiyGroup1
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['CF', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #! /bin/bash
+            - |
+              yum update -y
+            - |+
+
+  EIP6assignment:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: VM6
+    Properties:
+      InstanceId: !Ref VM6
+      EIP: !Ref EIP6
+
+  # ---- VM7 ----
+  EIP7:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VM7:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: EIP7
+    Properties:
+      KeyName: !Ref EC2KEY
+      ImageId: !Ref X64AmiId
+      InstanceType: !Ref APPInstanceType
+      Monitoring: true
+      IamInstanceProfile: !Ref SSMIAMprofile
+      BlockDeviceMappings: # Use gp3 as root disk @2021-01-31
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 100
+            DeleteOnTermination: true
+      SecurityGroupIds:
+        - !Ref APPSecurtiyGroup1
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['CF', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #! /bin/bash
+            - |
+              yum update -y
+            - |+
+
+  EIP7assignment:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: VM7
+    Properties:
+      InstanceId: !Ref VM7
+      EIP: !Ref EIP7
+
+  # ---- VM8 ----
+  EIP8:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VM8:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: EIP8
+    Properties:
+      KeyName: !Ref EC2KEY
+      ImageId: !Ref X64AmiId
+      InstanceType: !Ref APPInstanceType
+      Monitoring: true
+      IamInstanceProfile: !Ref SSMIAMprofile
+      BlockDeviceMappings: # Use gp3 as root disk @2021-01-31
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 100
+            DeleteOnTermination: true
+      SecurityGroupIds:
+        - !Ref APPSecurtiyGroup1
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['CF', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #! /bin/bash
+            - |
+              yum update -y
+            - |+
+
+  EIP8assignment:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: VM8
+    Properties:
+      InstanceId: !Ref VM8
+      EIP: !Ref EIP8
+
+  # ---- VM9 ----
+  EIP9:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VM9:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: EIP9
+    Properties:
+      KeyName: !Ref EC2KEY
+      ImageId: !Ref X64AmiId
+      InstanceType: !Ref APPInstanceType
+      Monitoring: true
+      IamInstanceProfile: !Ref SSMIAMprofile
+      BlockDeviceMappings: # Use gp3 as root disk @2021-01-31
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 100
+            DeleteOnTermination: true
+      SecurityGroupIds:
+        - !Ref APPSecurtiyGroup1
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['CF', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #! /bin/bash
+            - |
+              yum update -y
+            - |+
+
+  EIP9assignment:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: VM9
+    Properties:
+      InstanceId: !Ref VM9
+      EIP: !Ref EIP9
+
+  # ---- VM10 ----
+  EIP10:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  VM10:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: EIP10
+    Properties:
+      KeyName: !Ref EC2KEY
+      ImageId: !Ref X64AmiId
+      InstanceType: !Ref APPInstanceType
+      Monitoring: true
+      IamInstanceProfile: !Ref SSMIAMprofile
+      BlockDeviceMappings: # Use gp3 as root disk @2021-01-31
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 100
+            DeleteOnTermination: true
+      SecurityGroupIds:
+        - !Ref APPSecurtiyGroup1
+      Tags:
+        - Key: Name
+          Value: !Join ['-', ['CF', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #! /bin/bash
+            - |
+              yum update -y
+            - |+
+
+  EIP10assignment:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn: VM10
+    Properties:
+      InstanceId: !Ref VM10
+      EIP: !Ref EIP10
+
+Outputs:
+    EIP1:
+      Value: !Ref EIP1
+    EIP2:
+      Value: !Ref EIP2
+    EIP3:
+      Value: !Ref EIP3
+    EIP4:
+      Value: !Ref EIP4
+    EIP5:
+      Value: !Ref EIP5
+    EIP6:
+      Value: !Ref EIP6
+    EIP7:
+      Value: !Ref EIP7
+    EIP8:
+      Value: !Ref EIP8
+    EIP9:
+      Value: !Ref EIP9
+    EIP10:
+      Value: !Ref EIP10
