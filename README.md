@@ -24,14 +24,14 @@
 
 请参考视频：
 
-（1）使用Cloudfromation创建多个EC2并绑定EIP。此模版已经为EC2绑定了SSM需要的IAM Role。如下视频。
+（1）使用Cloudfromation创建多个EC2并绑定EIP。此模版已经为EC2绑定了SSM需要的IAM Role。如下[视频1](https://blogimg.bitipcman.com/video/Cloudformation-system-manager-01.mov)。
 
 <video src="https://blogimg.bitipcman.com/video/Cloudformation-system-manager-01.mov" width="1280px" height="720px" controls="controls"></video>
 
-（2）检查CloudFormation创建的EC2正常并通过Session Manager登录验证。如下视频。
+（2）检查CloudFormation创建的EC2正常并通过Session Manager登录验证。如下[视频2](https://blogimg.bitipcman.com/video/Cloudformation-system-manager-02.mov)。
 
 <video src="https://blogimg.bitipcman.com/video/Cloudformation-system-manager-02.mov" width="1280px" height="720px" controls="controls"></video>
 
-（3）使用System Manager批量执行命令。如下视频。
+（3）使用System Manager批量执行命令。如下[视频3](https://blogimg.bitipcman.com/video/Cloudformation-system-manager-03.mov)。
 
 <video src="https://blogimg.bitipcman.com/video/Cloudformation-system-manager-03.mov" width="1280px" height="720px" controls="controls"></video>
